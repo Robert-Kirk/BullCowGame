@@ -5,15 +5,20 @@
 void UBullCowCartridge::BeginPlay() // When the game starts
 {
     Super::BeginPlay();
+    ListOfHiddenWords = ListOfHiddenWords.FilterByPredicate([](const FString& str){
+        return IsIsogram(str);
+    });
+    
     PrintLine(TEXT("Welcome to my version of the \"Bull Cow Game\"! In this game you will be given an isogram to guess.\nWhen you guess, you will be informed about how close your guess was.\nThe number of Bulls is how many correct letters and positions you have.\nCows tell you if you have the correct letter, but not position.\nPlease enter your elected player name:"));
 }
 
 void UBullCowCartridge::OnInput(const FString &Input) // When the player hits enter
 {
-    ClearScreen();
+    FString Message = "Words remaining: ";
+    PrintLine(Message.Append(FString::FromInt(ListOfHiddenWords.Num())));
     DecideStatement(Input);
 }
-void UBullCowCartridge::DecideStatement(const FString Input)
+void UBullCowCartridge::DecideStatement(const FString& Input)
 {
 
     //GameOver Play again or not.
@@ -32,10 +37,10 @@ void UBullCowCartridge::DecideStatement(const FString Input)
     if (BeginningNewWord)
     {
         /*Generate new word and set values and display*/
-        
+        ClearScreen();
         int32 IndexOfWord = FMath::RandRange(0, ListOfHiddenWords.Num()-1);
         HiddenWord = ListOfHiddenWords[IndexOfWord];
-        //ListOfHiddenWords.Remove(HiddenWord);
+        ListOfHiddenWords.Remove(HiddenWord);
         Lives = (HiddenWord.Len() + 2);
         BeginningNewWord = false;
         ReportLives(Lives);
@@ -57,6 +62,8 @@ void UBullCowCartridge::DecideStatement(const FString Input)
     }
     if (GameOver)
     {
+        FString GameOverMessage = "The hidden word was ";
+        PrintLine(GameOverMessage.Append(HiddenWord.ToLower()));
         PrintLine(TEXT("Please type \"yes\" to continue or \"no\" to exit the game."));
     }
     else
@@ -69,7 +76,7 @@ void UBullCowCartridge::DecideStatement(const FString Input)
     }
 }
 //Declars if the answer is correct, ignoring case.
-bool UBullCowCartridge::JudgeAnswer(const FString Input)
+bool UBullCowCartridge::JudgeAnswer(const FString& Input)
 {
     return HiddenWord.Equals(Input, ESearchCase::IgnoreCase);
 }
@@ -78,7 +85,7 @@ User Input on what they want to do if they get a game over, regardless of victor
 submitting 'yes' will continue the game
 submitting 'no' will 'exit' the game.
 */
-void UBullCowCartridge::HandleGameOver(const FString Input)
+void UBullCowCartridge::HandleGameOver(const FString& Input)
 {
     if (Input.Equals(TEXT("yes"), ESearchCase::IgnoreCase))
     {
@@ -89,15 +96,21 @@ void UBullCowCartridge::HandleGameOver(const FString Input)
     else if (Input.Equals(TEXT("no"), ESearchCase::IgnoreCase))
     {
         //write code to exit game
+        // Super::EndPlay();
     }
 }
-void UBullCowCartridge::ReportLives(int32 Lives)
+void UBullCowCartridge::ReportLives(const int32& Lives)
 {
     FString Message = TEXT("You have: ");
-    Message.Append(FString::FromInt(Lives));
+    Message
+    .Append(FString::FromInt(Lives))
+    .Append(TEXT(" GUESSED WORDS:"));
+    for(FString GuessedWord : GuessedWords.Array()){
+        Message.Append(TEXT(" ")).Append(GuessedWord);
+    }
     PrintLine(Message);
 }
-void UBullCowCartridge::ResolveIncorrectGuess(const FString Input)
+void UBullCowCartridge::ResolveIncorrectGuess(const FString& Input)
 {
     if (IsAnswerCompliant(Input))
     {
@@ -121,34 +134,34 @@ void UBullCowCartridge::ResolveIncorrectGuess(const FString Input)
     }
     ReportLives(Lives - NumberOfGuessesMade);
 }
-bool UBullCowCartridge::IsAnswerCompliant(const FString Input)
+bool UBullCowCartridge::IsAnswerCompliant(const FString& Input)
 {
     return (IsIsogram(Input) && HiddenWord.Len() == Input.Len() && IsNotDuplicate(Input));
 }
-bool UBullCowCartridge::IsIsogram(const FString Input)
-{
+// bool UBullCowCartridge::IsIsogram(const FString Input)
+// {
 
-    TSet<TCHAR> SetOfInputChars;
-    for (int32 i = 0; i < Input.Len(); i++)
-    {
-        TCHAR CurrentChar = Input[i];
-        if (SetOfInputChars.Contains(CurrentChar))
-        {
-            return false;
-        }
-        else
-        {
-            SetOfInputChars.Add(CurrentChar);
-        }
-    }
+//     TSet<TCHAR> SetOfInputChars;
+//     for (int32 i = 0; i < Input.Len(); i++)
+//     {
+//         TCHAR CurrentChar = Input[i];
+//         if (SetOfInputChars.Contains(CurrentChar))
+//         {
+//             return false;
+//         }
+//         else
+//         {
+//             SetOfInputChars.Add(CurrentChar);
+//         }
+//     }
 
-    return true;
-}
-bool UBullCowCartridge::IsNotDuplicate(const FString Input)
+//     return true;
+// }
+bool UBullCowCartridge::IsNotDuplicate(const FString& Input)
 {
     if (!GuessedWords.Contains(Input.ToLower()))
     {
-        GuessedWords.Add(Input.ToLower());
+        GuessedWords.Emplace(Input.ToLower());
         return true;
     }
     else
@@ -157,7 +170,7 @@ bool UBullCowCartridge::IsNotDuplicate(const FString Input)
     }
 }
 
-void UBullCowCartridge::PrintBullsAndCowsStatement(const FString Input)
+void UBullCowCartridge::PrintBullsAndCowsStatement(const FString& Input)
 {
     int32 Bulls = 0;
     int32 Cows = 0;
